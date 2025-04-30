@@ -1,3 +1,4 @@
+# DEMO Link: https://covid-recovery-predictor-hldtqkycssea4xv4khzsmu.streamlit.app/
 # 🦠 COVID Recovery Risk Predictor App (Streamlit)
 
 This is a Streamlit web application that predicts the **recovery risk status** of a COVID-19 patient based on multiple health indicators such as age, vaccination status, liver function, GFR, spirometry, immunoglobulin, and T-cell count.
