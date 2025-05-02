@@ -15,32 +15,36 @@ st.sidebar.header("Navigation")
 options = st.sidebar.radio("Choose Action", ["Single Prediction", "Bulk Prediction & Visualization"])
 
 # -------------------- SINGLE PREDICTION --------------------
-if options == "Single Prediction":
-    st.subheader("🧍 Predict for One Patient")
+# Single input with manual mapping
+age = st.slider("Age", 18, 90, 35)
 
-    age = st.slider("Age", 18, 90, 35)
+vaccination = st.radio("Vaccination Status", ["YES", "NO"])
+vaccination = 1 if vaccination == "YES" else 0
 
-    vaccination = st.selectbox("Vaccination", ["YES", "NO"])
-    liver = st.selectbox("Liver", ["Normal", "Abnormal"])
-    gfr = st.selectbox("GFR (Kidney)", ["Normal", "Abnormal"])
-    immuno = st.selectbox("Immunoglobulin", ["Normal", "Abnormal"])
-    spirometry = st.selectbox("Spirometry", ["Normal", "Abnormal"])
-    t_cell = st.selectbox("T Cell Count", ["Normal", "Abnormal"])
+liver = st.radio("Liver Function", ["Normal", "Abnormal"])
+liver = 1 if liver == "Normal" else 0
 
-    # Create DataFrame
-    single_input = pd.DataFrame([{
-        "AGE": age,
-        "VACCINATION": vaccination,
-        "LIVER": liver,
-        "GFR": gfr,
-        "IMMUNOGLOBULIN": immuno,
-        "SPIROMETRY": spirometry,
-        "T_CELL_COUNT": t_cell
-    }])
+gfr = st.radio("GFR (Kidney)", ["Normal", "Abnormal"])
+gfr = 1 if gfr == "Normal" else 0
 
-    if st.button("Predict"):
-        prediction = model.predict(single_input)[0]
-        st.success(f"🩺 Predicted Recovery Status: **{prediction}**")
+immuno = st.radio("Immunoglobulin Levels", ["Normal", "Abnormal"])
+immuno = 1 if immuno == "Normal" else 0
+
+spirometry = st.radio("Spirometry", ["Normal", "Abnormal"])
+spirometry = 1 if spirometry == "Normal" else 0
+
+t_cell = st.radio("T Cell Count", ["Normal", "Abnormal"])
+t_cell = 1 if t_cell == "Normal" else 0
+
+# Prediction
+if st.button("Predict"):
+    single_input = pd.DataFrame([[
+        age, vaccination, liver, gfr, immuno, spirometry, t_cell
+    ]], columns=["AGE", "VACCINATION", "LIVER", "GFR", "IMMUNOGLOBULIN", "SPIROMETRY", "T_CELL_COUNT"])
+
+    prediction = model.predict(single_input)[0]
+    st.success(f"🩺 Predicted Recovery Status: **{prediction}**")
+
 
 # -------------------- BULK PREDICTION --------------------
 elif options == "Bulk Prediction & Visualization":
