@@ -1,41 +1,89 @@
-# covid_app.py
 import streamlit as st
 import pandas as pd
 import joblib
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Load trained model
-model = joblib.load('covid_recovery_model.pkl')
+# Load trained pipeline with preprocessing
+model = joblib.load("covid_recovery_model.pkl")
 
-st.title("🦠 COVID-19 Recovery Risk Predictor")
+st.set_page_config(page_title="COVID-19 Recovery Dashboard", layout="wide")
+st.title("🦠 COVID-19 Recovery Risk Predictor Dashboard")
 
-st.markdown("""
-Enter the patient's details below. The model will predict their COVID-19 recovery risk level.
-""")
+# Sidebar for navigation
+st.sidebar.header("Navigation")
+options = st.sidebar.radio("Choose Action", ["Single Prediction", "Bulk Prediction & Visualization"])
 
-# User Inputs
-age = st.slider("Age", min_value=18, max_value=80, value=30)
+# -------------------- SINGLE PREDICTION --------------------
+if options == "Single Prediction":
+    st.subheader("🧍 Predict for One Patient")
 
-vaccination = st.radio("Vaccination Status", ["Not Vaccinated (0)", "Vaccinated (1)"])
-vaccination = 1 if "Vaccinated" in vaccination else 0
+    age = st.slider("Age", 18, 90, 35)
 
-liver = st.radio("Liver Function", ["Abnormal (0)", "Normal (1)"])
-liver = 1 if "Normal" in liver else 0
+    vaccination = st.selectbox("Vaccination", ["YES", "NO"])
+    liver = st.selectbox("Liver", ["Normal", "Abnormal"])
+    gfr = st.selectbox("GFR (Kidney)", ["Normal", "Abnormal"])
+    immuno = st.selectbox("Immunoglobulin", ["Normal", "Abnormal"])
+    spirometry = st.selectbox("Spirometry", ["Normal", "Abnormal"])
+    t_cell = st.selectbox("T Cell Count", ["Normal", "Abnormal"])
 
-gfr = st.radio("GFR (Kidney)", ["Abnormal (0)", "Normal (1)"])
-gfr = 1 if "Normal" in gfr else 0
+    # Create DataFrame
+    single_input = pd.DataFrame([{
+        "AGE": age,
+        "VACCINATION": vaccination,
+        "LIVER": liver,
+        "GFR": gfr,
+        "IMMUNOGLOBULIN": immuno,
+        "SPIROMETRY": spirometry,
+        "T_CELL_COUNT": t_cell
+    }])
 
-immuno = st.radio("Immunoglobulin Levels", ["Abnormal (0)", "Normal (1)"])
-immuno = 1 if "Normal" in immuno else 0
+    if st.button("Predict"):
+        prediction = model.predict(single_input)[0]
+        st.success(f"🩺 Predicted Recovery Status: **{prediction}**")
 
-spirometry = st.radio("Spirometry", ["Abnormal (0)", "Normal (1)"])
-spirometry = 1 if "Normal" in spirometry else 0
+# -------------------- BULK PREDICTION --------------------
+elif options == "Bulk Prediction & Visualization":
+    st.subheader("📤 Upload Patient Data for Bulk Prediction")
 
-t_cell = st.radio("T Cell Count", ["Abnormal (0)", "Normal (1)"])
-t_cell = 1 if "Normal" in t_cell else 0
+    uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
 
-# Predict button
-if st.button("Predict Recovery Risk"):
-    input_df = pd.DataFrame([[age, vaccination, liver, gfr, immuno, spirometry, t_cell]],
-                            columns=["AGE", "VACCINATION", "LIVER", "GFR", "IMMUNOGLOBULIN", "SPIROMETRY", "T_CELL_COUNT"])
-    prediction = model.predict(input_df)[0]
-    st.success(f"🩺 Predicted Recovery Status: **{prediction}**")
+        try:
+            preds = model.predict(df)
+            df["Predicted_Recovery_Status"] = preds
+            st.success("✅ Predictions Completed")
+            st.dataframe(df)
+
+            # Download
+            download_csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button("Download Results", download_csv, "predicted_results.csv", "text/csv")
+
+            st.subheader("📊 Visualizations")
+
+            # Pie Chart
+            st.markdown("### 🥧 Recovery Status Distribution")
+            pie_data = df["Predicted_Recovery_Status"].value_counts()
+            fig1, ax1 = plt.subplots()
+            ax1.pie(pie_data, labels=pie_data.index, autopct='%1.1f%%', startangle=90)
+            ax1.axis("equal")
+            st.pyplot(fig1)
+
+            # Age vs Recovery
+            st.markdown("### 📈 Age vs Recovery Risk")
+            fig2, ax2 = plt.subplots(figsize=(8, 4))
+            sns.boxplot(data=df, x="Predicted_Recovery_Status", y="AGE", ax=ax2)
+            st.pyplot(fig2)
+
+            # Heatmap of Features
+            st.markdown("### 🔥 Correlation Heatmap (Numerical)")
+            numeric_df = df.select_dtypes(include='number')
+            if not numeric_df.empty:
+                fig3, ax3 = plt.subplots(figsize=(10, 6))
+                sns.heatmap(numeric_df.corr(), annot=True, cmap='coolwarm', ax=ax3)
+                st.pyplot(fig3)
+            else:
+                st.info("ℹ️ No numeric columns to display correlation heatmap.")
+        except Exception as e:
+            st.error(f"❌ Prediction Failed: {e}")
